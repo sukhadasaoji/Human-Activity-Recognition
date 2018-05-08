@@ -1,0 +1,198 @@
+---
+title: "Knn"
+author: "Santosh Shyamala Ramasubramanian"
+date: "April 28, 2018"
+output: word_document
+---
+
+```{r}
+library(ggplot2)
+library(dendextend)
+library(plyr)
+library(reshape2)
+library(lattice)
+library(caret)
+library(class)
+library(MASS)
+```
+
+
+```{r}
+train <- read.csv("D:/Santosh/Tamu Notes/ISEN 613/Project/HAR Dataset working directory/hartrain.csv")
+test <-read.csv("D:/Santosh/Tamu Notes/ISEN 613/Project/HAR Dataset working directory/hartest.csv")
+```
+
+
+```{r}
+data= rbind(train,test)
+```
+
+
+```{r}
+compute.misclass<-function(conf){
+    x= ncol(conf)
+    y= nrow(conf)
+    mis= 0
+    clas= 0
+    for (i in (1:x)){
+        for (j in (1:y)){
+            if(i==j){
+                clas= clas+conf[i,j]
+            }
+            else{
+                mis= mis+conf[i,j]
+            }
+        }
+    }
+    mis/(mis+clas)
+}
+```
+
+
+```{r}
+set.seed(1)
+tr <- data.frame(matrix(ncol = length(names(data)), nrow = 0))
+colnames(tr) <- names(data)
+te<- data.frame(matrix(ncol = length(names(data)), nrow = 0))
+colnames(te) <- names(data)
+kerr <- data.frame(matrix(ncol = 1, nrow = 0))
+kfold= 5
+totsize=21
+te.size= totsize/kfold
+
+for (k in (1:50)){
+    mis=0
+    for (i in (1:kfold)){
+        tr <- NULL
+        te <- NULL
+        te.idx= sample((1:totsize),te.size, replace=F)
+        for (j in (1: totsize)){
+            if (j %in% te.idx){
+                te <- rbind(te,data[(data$subject== j),])
+            }
+            else{
+                tr <- rbind(tr,data[(data$subject== j),])
+            }
+        }
+        tr.x= tr[,-c(562:563)]
+        tr.y= tr[,563]
+        te.x= te[,-c(562:563)]
+        te.y= te[,563]
+        knn.testpred=knn(tr.x,te.x,tr.y,k=k)
+        conf= table(knn.testpred,te.y)
+        mis= mis + compute.misclass(conf)
+    }
+    mis=mis/kfold
+    kerr <- rbind(kerr,mis)
+}
+```
+
+
+```{r}
+plot(c(1:50),kerr[,1],type='l',xlab='Number of Neighbours',ylab='Misclassification Rate')
+```
+
+
+```{r}
+traindata <- data.frame(matrix(ncol = length(names(data)), nrow = 0))
+testdata <- data.frame(matrix(ncol = length(names(data)), nrow = 0))
+for (i in 1:nrow(data)){
+  if(data$subject[i]<22){
+    traindata= rbind(traindata,data[i,])
+  }
+  else{
+    testdata= rbind(testdata,data[i,])
+  }
+}
+```
+
+
+```{r}
+train.x= traindata[,-c(562,563)]
+train.y= traindata[,563]
+test.x= testdata[,-c(562,563)]
+test.y= testdata[,563]
+```
+
+
+```{r}
+knn.testpred=knn(train.x,test.x,train.y,k=17)
+knn.testconf= table(knn.testpred,test.y)
+knn.testconf
+```
+
+
+```{r}
+accuracy= 1- compute.misclass(knn.testconf)
+cat('The Accuracy of this model is: ', accuracy)
+```
+
+
+```{r}
+cor = findCorrelation(cor(data[,-c(562,563)]), cutoff = 0.8)
+uncor.data= data[,-cor]
+```
+
+
+```{r}
+set.seed(1)
+tr <- data.frame(matrix(ncol = length(names(uncor.data)), nrow = 0))
+colnames(tr) <- names(uncor.data)
+te<- data.frame(matrix(ncol = length(names(uncor.data)), nrow = 0))
+colnames(te) <- names(uncor.data)
+kerr <- data.frame(matrix(ncol = 1, nrow = 0))
+kfold= 5
+totsize=21
+te.size= totsize/kfold
+
+for (k in (1:50)){
+    mis=0
+    for (i in (1:kfold)){
+        tr <- NULL
+        te <- NULL
+        te.idx= sample((1:totsize),te.size, replace=F)
+        for (j in (1: totsize)){
+            if (j %in% te.idx){
+                te <- rbind(te,uncor.data[(uncor.data$subject== j),])
+            }
+            else{
+                tr <- rbind(tr,uncor.data[(uncor.data$subject== j),])
+            }
+        }
+        tr.x= tr[,-c(173:174)]
+        tr.y= tr[,174]
+        te.x= te[,-c(173:174)]
+        te.y= te[,174]
+        knn.testpred=knn(tr.x,te.x,tr.y,k=k)
+        conf= table(knn.testpred,te.y)
+        mis= mis + compute.misclass(conf)
+    }
+    mis=mis/kfold
+    kerr <- rbind(kerr,mis)
+}
+```
+
+
+```{r}
+plot(c(1:50),kerr[,1],type='l',xlab='Number of Neighbours',ylab='Misclassification Rate')
+```
+
+
+```{r}
+train.x= train.x[,-cor]
+test.x= test.x[-cor]
+```
+
+
+```{r}
+knn.testpred=knn(train.x,test.x,train.y,k=12)
+knn.testconf= table(knn.testpred,test.y)
+knn.testconf
+```
+
+
+```{r}
+accuracy= 1- compute.misclass(knn.testconf)
+cat('The Accuracy of this model is: ', accuracy)
+```
+
